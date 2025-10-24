@@ -16,7 +16,7 @@ public class RoomResponse {
     private Integer currentPlayers;
     private MatchRoom.RoomStatus status;
     private Integer stockPrice;
-    private LinkedList<Float> priceHistory;
+    private LinkedList<Integer> priceHistory;
 
     public static RoomResponse from(MatchRoom room) {
         return RoomResponse.builder()

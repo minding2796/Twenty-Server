@@ -12,7 +12,7 @@ import java.util.List;
 @Builder
 public class StockResponse {
     private Integer stockPrice;
-    private List<Float> priceHistory;
+    private List<Integer> priceHistory;
     private Integer colCooldown;
     private Integer costOfLiving;
 

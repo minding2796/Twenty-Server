@@ -2,6 +2,7 @@ package com.thinkinggms.twenty_backend.component;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.thinkinggms.twenty_backend.repository.UserRepository;
 import com.thinkinggms.twenty_backend.statics.MatchRoom;
 import com.thinkinggms.twenty_backend.domain.User;
 import com.thinkinggms.twenty_backend.dto.RoomResponse;
@@ -13,7 +14,6 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -25,8 +25,8 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class WebSocketHandler extends TextWebSocketHandler {
-    private final MatchRoomRepository roomRepository;
     private final MatchingService matchingService;
+    private final UserRepository userRepository;
     private final GameService gameService;
     private final ObjectMapper objectMapper;
 
@@ -44,6 +44,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             )));
             return;
         }
+        System.out.println("Message Received: " + payload);
         switch (command.getCommand()) {
             case "match" -> {
                 MatchRoom room = matchingService.match(user);
@@ -56,7 +57,6 @@ public class WebSocketHandler extends TextWebSocketHandler {
                         .build();
                 room.getPlayerStatus().add(ps);
                 room.getSessions().add(session);
-                room.getSessions().forEach(System.out::println);
                 if (room.getStatus().equals(MatchRoom.RoomStatus.FULL)) {
                     gameService.initializeRoom(room);
                     sendToEachSocket(room.getSessions(), new TextMessage(objectMapper.writeValueAsString(
@@ -115,6 +115,16 @@ public class WebSocketHandler extends TextWebSocketHandler {
                     )));
                 }
             }
+            case "game/lose" -> {
+                MatchRoom room = matchingService.getRoomContainsUser(user);
+                sendCommand(room.getSessions(),
+                        WebSocketHandler.CommandMessage.builder()
+                                .command("game/game_set")
+                                .data("LOSE-" + user.getEmail())
+                                .build()
+                );
+                room.getPlayerStatus().forEach(p -> matchingService.leaveRoom(userRepository.findByEmail(p.getUserEmail()).orElseThrow()));
+            }
             default -> {}
         }
     }
@@ -128,19 +138,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     public void sendToEachSocket(List<WebSocketSession> sessions, TextMessage message) {
-        sessions.parallelStream().forEach(roomSession -> {
+        System.out.println("Message Sent: " + message.getPayload());
+        sessions.forEach(roomSession -> {
             try {
                 roomSession.sendMessage(message);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         });
-    }
-
-    @Override
-    public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-        roomRepository.findAll().stream().filter(r -> r.getSessions().contains(session)).forEach(r -> r.getSessions().remove(session));
-        // super.afterConnectionClosed(session, status);
     }
 
     @Getter

@@ -18,7 +18,7 @@ public class MatchRoom {
     private RoomStatus status;
 
     private Integer stockPrice;
-    private LinkedList<Float> priceHistory;
+    private LinkedList<Integer> priceHistory;
     private Integer costOfLiving;
     private Integer maxColCooldown;
     private Integer colCooldown;

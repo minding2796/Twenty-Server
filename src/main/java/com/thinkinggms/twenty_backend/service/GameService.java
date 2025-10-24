@@ -21,11 +21,13 @@ public class GameService {
     private final MatchingService matchingService;
 
     public List<MatchRoom.PlayerStatus> getPlayerStatus(User user) {
+        System.out.println("getPlayerStatus: " + user);
         MatchRoom room = matchingService.getRoomContainsUser(user);
         return room.getPlayerStatus().stream().sorted(Comparator.comparingLong(ps -> Math.abs(ps.getUserEmail().compareTo(user.getEmail())))).toList();
     }
 
     public StockResponse getStockStatus(User user) {
+        System.out.println("getStockStatus: " + user);
         MatchRoom room = matchingService.getRoomContainsUser(user);
         return StockResponse.from(room);
     }
@@ -37,7 +39,7 @@ public class GameService {
             nextPrice(room);
         }
         room.setStockPrice(basePrice);
-        room.getPriceHistory().addFirst((float) room.getStockPrice());
+        room.getPriceHistory().addFirst(room.getStockPrice());
     }
 
     public void buyStock(MatchRoom room, User user, int amount) {
@@ -145,7 +147,7 @@ public class GameService {
             room.setStockPrice(Math.min(Math.max(room.getStockPrice(), minPrice), maxPrice));
         }
 
-        room.getPriceHistory().addFirst((float) room.getStockPrice());
+        room.getPriceHistory().addFirst(room.getStockPrice());
         while (room.getPriceHistory().size() > 50) room.getPriceHistory().removeLast();
     }
 }

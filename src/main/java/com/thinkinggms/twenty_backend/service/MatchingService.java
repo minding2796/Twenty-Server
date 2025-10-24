@@ -4,7 +4,6 @@ import com.thinkinggms.twenty_backend.statics.MatchRoom;
 import com.thinkinggms.twenty_backend.domain.User;
 import com.thinkinggms.twenty_backend.dto.RoomResponse;
 import com.thinkinggms.twenty_backend.component.MatchRoomRepository;
-import com.thinkinggms.twenty_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
