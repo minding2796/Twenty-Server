@@ -6,6 +6,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: "https://twenty-backend.thinkinggms.com/login/oauth2/code/{registrationId}"
             scope:
               - email
               - profile
@@ -13,7 +14,7 @@ spring:
             client-id: ${DISCORD_CLIENT_ID}
             client-secret: ${DISCORD_CLIENT_SECRET}
             client-name: Discord
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: "https://twenty-backend.thinkinggms.com/login/oauth2/code/{registrationId}"
             authorization-grant-type: authorization_code
             scope:
               - identify
@@ -25,12 +26,12 @@ spring:
             user-info-uri: https://discord.com/api/users/@me
             user-name-attribute: id
   datasource:
-    url: jdbc:mysql://localhost:3306/twenty
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    username: ${MYSQL_USER}
-    password: ${MYSQL_PASSWORD}
-
+    url: jdbc:sqlite:data/twenty.db
+    driver-class-name: org.sqlite.JDBC
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
   jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
     hibernate:
       ddl-auto: update
     show-sql: false
@@ -51,4 +52,16 @@ app:
     redirectUri: /api/auth/oauth2/redirect  # OAuth2 로그인 성공 후 리다이렉트할 URI
 
 server:
-  port: 9485
+  port: 9487
+  forward-headers-strategy: NATIVE
+  tomcat:
+    # noinspection SpringBootApplicationYaml
+    remote-ip-header: X-Forwarded-For
+    # noinspection SpringBootApplicationYaml
+    protocol-header: X-Forwarded-Proto
+    # noinspection SpringBootApplicationYaml
+    internal-proxies: .*
+  servlet:
+    session:
+      cookie:
+        secure: true

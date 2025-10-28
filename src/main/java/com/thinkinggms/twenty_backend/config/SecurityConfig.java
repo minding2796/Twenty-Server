@@ -43,7 +43,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         .requestMatchers("/", "/error", "/favicon.ico", "/h2-console/**", "/debug/**").permitAll()
-                        .requestMatchers("/auth/**", "/oauth2/**", "/api/auth/oauth2/redirect", "/api/matching", "/api/auth/me").permitAll()
+                        .requestMatchers("/auth/**", "/oauth2/**", "/api/auth/oauth2/redirect", "/api/matching").permitAll()
+                        .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/ws").authenticated()
                         .requestMatchers("/api/game/**").authenticated()
                         .anyRequest().authenticated())

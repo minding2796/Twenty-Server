@@ -14,12 +14,15 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Slf4j
 @Component
@@ -116,16 +119,21 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 }
             }
             case "game/lose" -> {
-                MatchRoom room = matchingService.getRoomContainsUser(user);
-                sendCommand(room.getSessions(),
-                        WebSocketHandler.CommandMessage.builder()
-                                .command("game/game_set")
-                                .data("LOSE-" + user.getEmail())
-                                .build()
-                );
-                room.getPlayerStatus().forEach(p -> matchingService.leaveRoom(userRepository.findByEmail(p.getUserEmail()).orElseThrow()));
+                try {
+                    MatchRoom room = matchingService.getRoomContainsUser(user);
+                    sendCommand(room.getSessions(),
+                            WebSocketHandler.CommandMessage.builder()
+                                    .command("game/game_set")
+                                    .data("LOSE-" + user.getEmail())
+                                    .build()
+                    );
+                    room.getPlayerStatus().forEach(p -> matchingService.leaveRoom(userRepository.findByEmail(p.getUserEmail()).orElseThrow()));
+                } catch (IllegalArgumentException e) {
+                    System.out.println("플레이어가 존재한 방이 없어 무시되었습니다.");
+                }
             }
-            default -> {}
+            default -> {
+            }
         }
     }
 
@@ -146,6 +154,43 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        User user = (User) session.getAttributes().get("userPrincipal");
+        if (user == null) {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
+                    CommandMessage.builder()
+                            .command("error")
+                            .data("You are not logged in!")
+                            .build()
+            )));
+            return;
+        }
+        Logger.getLogger(WebSocketHandler.class.getName()).log(Level.INFO, "connection established: " + user.getEmail());
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, @NonNull CloseStatus status) throws Exception {
+        User user = (User) session.getAttributes().get("userPrincipal");
+        Logger.getLogger(WebSocketHandler.class.getName()).log(Level.INFO, "connection closed: " + status);
+        if (user == null) {
+            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(
+                    CommandMessage.builder()
+                            .command("error")
+                            .data("You are not logged in!")
+                            .build()
+            )));
+            return;
+        }
+        Logger.getLogger(WebSocketHandler.class.getName()).log(Level.INFO, user.getEmail() + " left the game.");
+        MatchRoom room = matchingService.getRoomContainsUser(user);
+        MatchRoom.PlayerStatus ps = gameService.getPlayerStatus(user).get(0);
+        matchingService.leaveRoom(user);
+        room.getSessions().remove(session);
+        room.getPlayerStatus().remove(ps);
+        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(CommandMessage.builder().command("match/closed").data("").build())));
     }
 
     @Getter

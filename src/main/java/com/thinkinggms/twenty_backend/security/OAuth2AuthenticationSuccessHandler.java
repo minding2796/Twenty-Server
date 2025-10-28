@@ -35,8 +35,14 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
     protected String determineTargetUrl(Authentication authentication) {
         String token = tokenProvider.generateToken(authentication);
+        
+        // HTTPS URL 사용하기
+        String baseRedirectUrl = redirectUri;
+        if (baseRedirectUrl.startsWith("/")) {
+            baseRedirectUrl = "https://twenty.thinkinggms.com" + baseRedirectUrl;
+        }
 
-        return UriComponentsBuilder.fromUriString(redirectUri)
+        return UriComponentsBuilder.fromUriString(baseRedirectUrl)
                 .queryParam("token", token)
                 .build().toUriString();
     }

@@ -1,6 +1,7 @@
 package com.thinkinggms.twenty_backend.service;
 
 import com.thinkinggms.twenty_backend.domain.User;
+import com.thinkinggms.twenty_backend.dto.UserInfoDto;
 import com.thinkinggms.twenty_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,10 @@ import java.util.Optional;
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final UserRepository userRepository;
+
+    public void editUser(User user, UserInfoDto newUser) {
+        userRepository.save(user.update(newUser.getName(), newUser.getPicture()));
+    }
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
