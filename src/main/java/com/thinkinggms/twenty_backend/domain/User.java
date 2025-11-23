@@ -41,9 +41,8 @@ public class User {
         GOOGLE, DISCORD
     }
 
-    public User update(String name, String picture) {
+    public User update(String name) {
         this.name = name;
-        this.picture = picture;
         return this;
     }
 }

@@ -31,8 +31,8 @@ public class SecurityConfig {
         http.cors(cors -> cors.configurationSource(request -> {
                     var corsConfiguration = new CorsConfiguration();
                     corsConfiguration.setAllowCredentials(true);
-                    // corsConfiguration.setAllowedOrigins(List.of("https://twenty.thinkinggms.com"));
-                    corsConfiguration.setAllowedOriginPatterns(List.of("*"));
+                    corsConfiguration.setAllowedOrigins(List.of("https://twenty.thinkinggms.com"));
+                    // corsConfiguration.setAllowedOriginPatterns(List.of("*")); // for development
                     corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                     corsConfiguration.setAllowedHeaders(List.of("*"));
                     corsConfiguration.setExposedHeaders(List.of("*"));
@@ -42,9 +42,21 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
-                        .requestMatchers("/", "/error", "/favicon.ico", "/h2-console/**", "/debug/**").permitAll()
-                        .requestMatchers("/auth/**", "/oauth2/**", "/api/auth/oauth2/redirect", "/api/matching").permitAll()
+                        .requestMatchers("/").permitAll()
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/favicon.ico").permitAll()
+                        .requestMatchers("/h2-console/**").permitAll()
+                        .requestMatchers("/debug/**").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/oauth2/**").permitAll()
+                        .requestMatchers("/api/auth/oauth2/redirect").permitAll()
+                        .requestMatchers("/api/matching").permitAll()
+                        .requestMatchers("/api/announce/news-list").permitAll()
+                        .requestMatchers("/api/announce/news").permitAll()
+                        .requestMatchers("/api/announce/post-news").authenticated()
+                        .requestMatchers("/api/announce/delete-news").authenticated()
                         .requestMatchers("/api/auth/me").authenticated()
+                        .requestMatchers("/api/auth/edit").authenticated()
                         .requestMatchers("/ws").authenticated()
                         .requestMatchers("/api/game/**").authenticated()
                         .anyRequest().authenticated())

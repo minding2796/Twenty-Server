@@ -26,7 +26,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     private final UserRepository userRepository;
 
     public void editUser(User user, UserInfoDto newUser) {
-        userRepository.save(user.update(newUser.getName(), newUser.getPicture()));
+        userRepository.save(user.update(newUser.getName()));
     }
 
     @Override
@@ -72,18 +72,17 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         } else if (provider == User.AuthProvider.DISCORD) {
             String id = attributes.get("id").toString();
             String name = attributes.get("username").toString();
-            String discriminator = attributes.get("discriminator").toString();
             String email = attributes.containsKey("email") ? attributes.get("email").toString() : id + "@discord.com";
 
-            String avatarId = attributes.containsKey("avatar") ? attributes.get("avatar").toString() : null;
+            Object a = attributes.get("avatar");
+            String avatarId = a != null ? a.toString() : null;
             String picture = null;
-            if (avatarId != null) {
-                picture = "https://cdn.discordapp.com/avatars/" + id + "/" + avatarId + ".png";
-            }
+            if (avatarId != null) picture = "https://cdn.discordapp.com/avatars/" + id + "/" + avatarId + ".png";
+            if (picture == null) picture = "https://cdn.discordapp.com/embed/avatars/" + (Integer.parseInt(id) % 5) + ".png";
 
             return UserProfile.builder()
                     .id(id)
-                    .name(name + "#" + discriminator)
+                    .name(name)
                     .email(email)
                     .picture(picture)
                     .build();
@@ -98,7 +97,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         if (userOptional.isPresent()) {
             // 기존 사용자 업데이트
             User existingUser = userOptional.get();
-            return existingUser.update(profile.getName(), profile.getPicture());
+            return existingUser.update(profile.getName());
         } else {
             // 새 사용자 등록
             User user = User.builder()

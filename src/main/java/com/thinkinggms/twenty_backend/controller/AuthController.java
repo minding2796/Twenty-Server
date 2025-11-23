@@ -18,7 +18,6 @@ public class AuthController {
     @PostMapping("/edit")
     public ResponseEntity<UserInfoDto> editUser(@AuthenticationPrincipal User user, @RequestBody UserInfoDto newUser) {
         customOAuth2UserService.editUser(user, newUser);
-
         return ResponseEntity.ok(newUser);
     }
 
@@ -31,6 +30,7 @@ public class AuthController {
                 .email(user.getEmail())
                 .picture(user.getPicture())
                 .provider(user.getProvider().name())
+                .role(user.getRole().name())
                 .build();
 
         return ResponseEntity.ok(userInfo);
