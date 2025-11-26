@@ -1,13 +1,19 @@
 package com.thinkinggms.twenty_backend.service;
 
-import com.thinkinggms.twenty_backend.component.WebSocketHandler;
-import com.thinkinggms.twenty_backend.statics.MatchRoom;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.thinkinggms.twenty_backend.domain.User;
+import com.thinkinggms.twenty_backend.dto.GameData;
 import com.thinkinggms.twenty_backend.dto.StockResponse;
 import com.thinkinggms.twenty_backend.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import com.thinkinggms.twenty_backend.statics.MatchRoom;
+import com.thinkinggms.twenty_backend.component.WebSocketHandler;
+import com.thinkinggms.twenty_backend.utils.WebSocketUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.WebSocketSession;
 
+import lombok.RequiredArgsConstructor;
+
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
@@ -19,6 +25,7 @@ public class GameService {
     private final int basePrice = 20;
     private final UserRepository userRepository;
     private final MatchingService matchingService;
+    private final ObjectMapper objectMapper;
 
     public List<MatchRoom.PlayerStatus> getPlayerStatus(User user) {
         System.out.println("getPlayerStatus: " + user);
@@ -60,7 +67,7 @@ public class GameService {
         });
     }
 
-    public void onNextTurn(MatchRoom room, WebSocketHandler webSocketHandler) {
+    public void onNextTurn(MatchRoom room) {
         nextPrice(room);
 
         room.setColCooldown(room.getColCooldown() - 1);
@@ -87,7 +94,7 @@ public class GameService {
                 room.getPlayerStatus().stream().allMatch(ps -> ps.getGoStack() <= 0) ||
                 room.getPlayerStatus().stream().allMatch(ps -> ps.getCurrentFunds() >= 200)
         ) {
-            webSocketHandler.sendCommand(room.getSessions(),
+            WebSocketUtils.sendCommand(room.getSessions(),
                     WebSocketHandler.CommandMessage.builder()
                             .command("game/game_set")
                             .data("DRAW")
@@ -99,7 +106,7 @@ public class GameService {
         List<MatchRoom.PlayerStatus> winner = room.getPlayerStatus().stream().filter(ps -> ps.getCurrentFunds() >= 200).toList();
         if (!winner.isEmpty()) {
             User winnerUser = userRepository.findByEmail(winner.get(0).getUserEmail()).orElseThrow();
-            webSocketHandler.sendCommand(room.getSessions(),
+            WebSocketUtils.sendCommand(room.getSessions(),
                     WebSocketHandler.CommandMessage.builder()
                             .command("game/game_set")
                             .data("WIN-" + winnerUser.getEmail())
@@ -111,13 +118,46 @@ public class GameService {
         List<MatchRoom.PlayerStatus> loser = room.getPlayerStatus().stream().filter(ps -> ps.getGoStack() <= 0).toList();
         if (!loser.isEmpty()) {
             User loserUser = userRepository.findByEmail(loser.get(0).getUserEmail()).orElseThrow();
-            webSocketHandler.sendCommand(room.getSessions(),
+            WebSocketUtils.sendCommand(room.getSessions(),
                     WebSocketHandler.CommandMessage.builder()
                             .command("game/game_set")
                             .data("LOSE-" + loserUser.getEmail())
                             .build()
             );
             room.getPlayerStatus().forEach(ps -> matchingService.leaveRoom(userRepository.findByEmail(ps.getUserEmail()).orElseThrow()));
+        }
+    }
+
+    /**
+     * 세션 기준으로 해당 유저를 패배 처리한다.
+     * - 세션에서 User를 찾고
+     * - 속한 방을 조회한 뒤
+     * - 방 전체에 패배 메시지 브로드캐스트
+     * - 방에 있는 모든 플레이어를 매칭에서 제거
+     */
+    public void lose(WebSocketSession session) {
+        // 로그인 정보가 없으면 아무 것도 하지 않음
+        if (!(session.getAttributes().get("userPrincipal") instanceof User user)) return;
+
+        try {
+            MatchRoom room = matchingService.getRoomContainsUser(user);
+
+            // 패배 브로드캐스트
+            WebSocketHandler.CommandMessage command = WebSocketHandler.CommandMessage.builder()
+                    .command("game/game_set")
+                    .data("LOSE-" + user.getEmail())
+                    .build();
+            WebSocketUtils.sendCommand(room.getSessions(), command);
+
+            // 방에 속한 모든 플레이어를 매칭에서 제거
+            room.getPlayerStatus().forEach(p -> {
+                User u = userRepository.findByEmail(p.getUserEmail())
+                        .orElseThrow(() -> new IllegalArgumentException("User not found: " + p.getUserEmail()));
+                matchingService.leaveRoom(u);
+            });
+        } catch (IllegalArgumentException e) {
+            // 방이 없으면 무시
+            System.out.println("플레이어가 존재한 방이 없어 무시되었습니다.");
         }
     }
 
@@ -149,5 +189,26 @@ public class GameService {
 
         room.getPriceHistory().addFirst(room.getStockPrice());
         while (room.getPriceHistory().size() > 50) room.getPriceHistory().removeLast();
+    }
+
+    public GameData getGameData(User user) {
+        return user.getGameData();
+    }
+
+    public void updateGameData(User user, GameData data) {
+        userRepository.save(user.update(data));
+    }
+
+    public GameData resetGameData(User user) {
+        return userRepository.save(user.update(
+                GameData.builder()
+                        .userEmail(user.getEmail())
+                        .currentFunds(100)
+                        .goStack(3)
+                        .cooldown(0)
+                        .stockPrice(20)
+                        .priceHistory(new ArrayList<>())
+                        .colCooldown(5)
+                        .build())).getGameData();
     }
 }

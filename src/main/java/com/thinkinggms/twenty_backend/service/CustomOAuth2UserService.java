@@ -1,6 +1,7 @@
 package com.thinkinggms.twenty_backend.service;
 
 import com.thinkinggms.twenty_backend.domain.User;
+import com.thinkinggms.twenty_backend.dto.GameData;
 import com.thinkinggms.twenty_backend.dto.UserInfoDto;
 import com.thinkinggms.twenty_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,9 +15,7 @@ import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -107,6 +106,17 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
                     .provider(provider)
                     .providerId(profile.getId())
                     .role(User.Role.USER)
+                    .gameData(
+                            GameData.builder()
+                                    .userEmail(profile.getEmail())
+                                    .currentFunds(100)
+                                    .goStack(3)
+                                    .cooldown(0)
+                                    .stockPrice(20)
+                                    .priceHistory(new ArrayList<>())
+                                    .colCooldown(5)
+                                    .build()
+                    )
                     .build();
             return userRepository.save(user);
         }
